@@ -11,11 +11,18 @@ This is the Lab "deployed MVP" deliverable. It satisfies every requirement:
 | **Authentication** | Supabase Auth — email/password sign up, sign in, sign out. |
 | **Per-account data isolation** | Postgres **Row-Level Security**: a user can only read/write their own rows (`supabase/schema.sql`). |
 | **Database entity that persists** | `match_runs` table in Supabase Postgres. |
-| **Transaction flow (create/modify/delete via UI)** | New run, edit run, and delete run are all done through the UI. |
-| **Basic analytics** | PostHog captures `match_run_created` (plus sign-in, sign-up, update, delete). |
+| **Transaction flow (create/modify/delete via UI)** | New AI match run, edit run, and delete run are all done through the UI. |
+| **Basic analytics** | PostHog captures `match_run_created` and `ai_match_run` (plus sign-in/up/delete). |
 | **Reproducible from README** | These instructions. |
 
-**Stack:** Next.js 14 (App Router) · Supabase (Postgres + Auth) · PostHog · deploys on Vercel.
+**Stack:** Next.js 14 (App Router) · Supabase (Postgres + Auth) · Google Gemini (AI matching) · PostHog · deploys on Vercel.
+
+## What it does
+A logged-in user clicks **New match run**, then **pastes or uploads** (PDF/.txt) a patient's
+information and a trial's eligibility rules. They click **Run AI match**; the app sends both
+to Google Gemini server-side, which returns a **rule-by-rule eligibility verdict** (met /
+fails / unclear) with the source and reasoning for each, plus an overall eligible result. The
+user saves that run to their private account, where they can view, edit, and delete it.
 
 ---
 
@@ -43,8 +50,12 @@ npm install
 1. In PostHog, create a project. Go to **Settings → Project → Project API Key** and copy the key (starts with `phc_`).
 2. Note your host: usually `https://us.i.posthog.com` (US) or `https://eu.i.posthog.com` (EU).
 
+### 3b. Get a free Google Gemini API key (powers the AI matching)
+1. Go to **https://aistudio.google.com/apikey** and sign in with a Google account.
+2. Click **Create API key** (the free tier needs no credit card). Copy the key.
+
 ### 4. Add environment variables
-Copy the example file and fill in your four values:
+Copy the example file and fill in your values:
 ```bash
 cp .env.example .env.local
 ```
@@ -54,7 +65,9 @@ NEXT_PUBLIC_SUPABASE_URL=https://YOUR-PROJECT.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=YOUR-ANON-KEY
 NEXT_PUBLIC_POSTHOG_KEY=phc_YOUR_KEY
 NEXT_PUBLIC_POSTHOG_HOST=https://us.i.posthog.com
+GEMINI_API_KEY=YOUR-GEMINI-KEY
 ```
+> `GEMINI_API_KEY` has **no** `NEXT_PUBLIC_` prefix on purpose — it stays server-side and is never sent to the browser.
 
 ### 5. Run
 ```bash
@@ -68,10 +81,10 @@ Open http://localhost:3000. Sign up, create a match run, and you're in.
 
 1. Push this repo to GitHub (see below).
 2. Go to https://vercel.com, click **Add New → Project**, and import your GitHub repo.
-3. Before clicking Deploy, expand **Environment Variables** and add the same four
+3. Before clicking Deploy, expand **Environment Variables** and add the same five
    variables from your `.env.local` (`NEXT_PUBLIC_SUPABASE_URL`,
    `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_POSTHOG_KEY`,
-   `NEXT_PUBLIC_POSTHOG_HOST`).
+   `NEXT_PUBLIC_POSTHOG_HOST`, and `GEMINI_API_KEY`).
 4. Click **Deploy**. Vercel gives you a live `https://your-app.vercel.app` URL.
 5. **One required Supabase setting for the live URL:** in Supabase go to
    **Authentication → URL Configuration** and add your Vercel URL to **Site URL**
